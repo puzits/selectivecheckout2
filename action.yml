@@ -54,8 +54,6 @@ runs:
              foreach($i in $retry){
                try{
                   
-                  Remove-Item -LiteralPath "$RepoSynchFolderName" -Force -Recurse -ErrorAction SilentlyContinue
-                  
                   if(!(Test-Path "C:\RepoSynchFolder\$runnerName")) {
                     New-Item "C:\RepoSynchFolder\$runnerName" -ItemType Directory
                   }
@@ -70,7 +68,7 @@ runs:
                   { 
                     set-location "$RepoSynchFolderName" 
                     & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
-                    & "C:\Program Files\Git\bin\git.exe" pull 
+                   # & "C:\Program Files\Git\bin\git.exe" pull 
                   }
                   break
                 }
