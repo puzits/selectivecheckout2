@@ -50,23 +50,32 @@ runs:
              
              Write-Output "${RepoSynchFolderName}" 
              
-             
-             if(!(Test-Path "C:\RepoSynchFolder\$runnerName")) {
-               New-Item "C:\RepoSynchFolder\$runnerName" -ItemType Directory
-             }
-             
-             if(!(Test-Path "$RepoSynchFolderName")){
-              set-Location "C:\RepoSynchFolder\$runnerName"
-              & "C:\Program Files\Git\bin\git.exe" clone "https://devops:${env:token}@github.com/$repository.git"
-              set-location "$RepoSynchFolderName" 
-              & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
-             }
-             else
-             { 
-               set-location "$RepoSynchFolderName" 
-               & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
-               & "C:\Program Files\Git\bin\git.exe" pull 
-             }
+             $retry = 1..3
+             foreach($i in $retry){
+               try{
+                  if(!(Test-Path "C:\RepoSynchFolder\$runnerName")) {
+                    New-Item "C:\RepoSynchFolder\$runnerName" -ItemType Directory
+                  }
+
+                  if(!(Test-Path "$RepoSynchFolderName")){
+                   set-Location "C:\RepoSynchFolder\$runnerName"
+                   & "C:\Program Files\Git\bin\git.exe" clone "https://devops:${env:token}@github.com/$repository.git"
+                   set-location "$RepoSynchFolderName" 
+                   & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
+                  }
+                  else
+                  { 
+                    set-location "$RepoSynchFolderName" 
+                    & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
+                    & "C:\Program Files\Git\bin\git.exe" pull 
+                  }
+                  break
+                }
+                catch{
+                  Remove-Item -LiteralPath "$RepoSynchFolderName" -Force -Recurse -ErrorAction SilentlyContinue
+                }
+              }
+
              $files = ${env:files}
              if($files -ne "") {
              foreach($file in $files.split(" "))
