@@ -1,0 +1,90 @@
+name: 'github-selective-checkout'
+description: 'Checkout only certain files'
+author: 'puzit.singh@icertis.com'
+
+branding:
+  icon: 'download'
+  color: 'blue'
+
+inputs:
+  files:
+    description: 'Files to checkout from the repo'
+    required: true
+  token:
+    description: 'A Github Private Access Token'
+    default: ${{ github.token }}
+    required: false
+  branch:
+    description: 'Branch to checkout files from'
+    required: false
+    default: "main"
+  repository:
+    description: 'Repository to checkout'
+    required: false
+    default: "Icertis-Engineering/ici-devops"
+
+runs:
+  using: 'composite'
+  steps:
+    - run: |
+             try{
+             Write-Output "Installing git"
+             choco install git -y  
+             }
+             catch{
+              Write-Output "Failed while installing git"
+             }
+             
+             
+             $runnerworkfolder = "${env:GITHUB_WORKSPACE}".split("\")
+             $runnerName =  $runnerworkfolder[1]
+             
+             Write-Output "$runnerworkfolder"
+             
+             $repository = ${env:repository}
+            
+              write-output "Repository: ${repository}"
+             
+             $RepoName = $repository.replace("Icertis-Engineering/", "")
+             $RepoSynchFolderName = "C:\RepoSynchFolder\$runnerName\$RepoName"
+             
+             Write-Output "${RepoSynchFolderName}" 
+             
+             
+             if(!(Test-Path "C:\RepoSynchFolder\$runnerName")) {
+               New-Item "C:\RepoSynchFolder\$runnerName" -ItemType Directory
+             }
+             
+             if(!(Test-Path "$RepoSynchFolderName")){
+              set-Location "C:\RepoSynchFolder\$runnerName"
+              & "C:\Program Files\Git\bin\git.exe" clone "https://devops:${env:token}@github.com/$repository.git"
+              set-location "$RepoSynchFolderName" 
+              & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
+             }
+             else
+             { 
+               set-location "$RepoSynchFolderName" 
+               & "C:\Program Files\Git\bin\git.exe" checkout ${env:branch}
+               & "C:\Program Files\Git\bin\git.exe" pull 
+             }
+             $files = ${env:files}
+             if($files -ne "") {
+             foreach($file in $files.split(" "))
+             {
+               Remove-Item -LiteralPath "${env:GITHUB_WORKSPACE}\$file" -Force -Recurse -ErrorAction SilentlyContinue
+               Copy-Item -Path "$RepoSynchFolderName\$file" -Destination "${env:GITHUB_WORKSPACE}\$file" -Recurse -Force
+             }
+             }
+             else
+             {
+                Copy-Item -Path "$RepoSynchFolderName" -Destination "${env:GITHUB_WORKSPACE}" -Recurse -Force
+             }
+             
+            
+      shell: powershell
+      env: 
+        files: ${{ inputs.files }}
+        token: ${{ inputs.token }}
+        repository: ${{ inputs.repository }}
+        branch: ${{ inputs.branch }}
+        
